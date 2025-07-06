@@ -3,10 +3,68 @@ package sys
 import (
 	"io/fs"
 	"os"
+	"strings"
 	"testing"
 
+	experimentalsys "github.com/tetratelabs/wazero/experimental/sys"
+	"github.com/tetratelabs/wazero/internal/fsapi"
 	"github.com/tetratelabs/wazero/internal/testing/require"
 )
+
+// pollableReader is a mock io.Reader that implements experimentalsys.Pollable.
+type pollableReader struct {
+	*strings.Reader
+	pollReady bool
+	pollErrno experimentalsys.Errno
+}
+
+func (r *pollableReader) Poll(flag experimentalsys.Pflag, timeoutMillis int32) (bool, experimentalsys.Errno) {
+	return r.pollReady, r.pollErrno
+}
+
+func TestStdinFilePoll_Pollable(t *testing.T) {
+	timeout := int32(0) // return immediately
+
+	pr := &pollableReader{
+		Reader:    strings.NewReader("data"),
+		pollReady: true,
+	}
+	f := &StdinFile{Reader: pr}
+
+	// When the reader implements Pollable, Poll delegates to it.
+	ready, errno := f.Poll(fsapi.POLLIN, timeout)
+	require.EqualErrno(t, 0, errno)
+	require.True(t, ready)
+
+	// A Pollable reader can also handle POLLOUT.
+	ready, errno = f.Poll(fsapi.POLLOUT, timeout)
+	require.EqualErrno(t, 0, errno)
+	require.True(t, ready)
+
+	// When the Pollable returns an error, it propagates.
+	pr.pollReady = false
+	pr.pollErrno = experimentalsys.ENOTSUP
+	ready, errno = f.Poll(fsapi.POLLIN, timeout)
+	require.EqualErrno(t, experimentalsys.ENOTSUP, errno)
+	require.False(t, ready)
+}
+
+func TestStdinFilePoll_NonPollable(t *testing.T) {
+	timeout := int32(0) // return immediately
+
+	// A reader that doesn't implement Pollable.
+	f := &StdinFile{Reader: strings.NewReader("data")}
+
+	// POLLIN returns ready because we assume the reader has data.
+	ready, errno := f.Poll(fsapi.POLLIN, timeout)
+	require.EqualErrno(t, 0, errno)
+	require.True(t, ready)
+
+	// POLLOUT is not supported without a Pollable implementation.
+	ready, errno = f.Poll(fsapi.POLLOUT, timeout)
+	require.EqualErrno(t, experimentalsys.ENOTSUP, errno)
+	require.False(t, ready)
+}
 
 func TestStdio(t *testing.T) {
 	// simulate regular file attached to stdin
