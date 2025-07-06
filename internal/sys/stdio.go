@@ -24,6 +24,19 @@ func (f *StdinFile) Read(buf []byte) (int, experimentalsys.Errno) {
 	return n, experimentalsys.UnwrapOSError(err)
 }
 
+// Poll implements the same method as documented on fsapi.File
+func (f *StdinFile) Poll(flag fsapi.Pflag, timeoutMillis int32) (ready bool, errno experimentalsys.Errno) {
+	if p, ok := f.Reader.(experimentalsys.Pollable); ok {
+		return p.Poll(flag, timeoutMillis)
+	}
+
+	if flag != fsapi.POLLIN {
+		return false, experimentalsys.ENOTSUP
+	}
+
+	return true, 0 // No poll support; assume always ready
+}
+
 type writerFile struct {
 	noopStdoutFile
 

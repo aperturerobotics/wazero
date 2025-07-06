@@ -174,8 +174,8 @@ func pollOneoffFn(_ context.Context, mod api.Module, params []uint64) sys.Errno 
 	if !ok {
 		return sys.EBADF
 	}
-	// Wait for the timeout to expire, or for some data to become available on Stdin.
 
+	// Wait for the timeout to expire, or for some data to become available on Stdin.
 	if stdinReady, errno := stdin.File.Poll(fsapi.POLLIN, int32(timeout.Milliseconds())); errno != 0 {
 		return errno
 	} else if stdinReady {

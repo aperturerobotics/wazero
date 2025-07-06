@@ -404,6 +404,62 @@ func TestFilePoll_POLLOUT(t *testing.T) {
 	require.False(t, ready)
 }
 
+// pollableFsFile is a mock fs.File that also implements experimentalsys.Pollable.
+type pollableFsFile struct {
+	fs.File
+	pollReady bool
+	pollErrno experimentalsys.Errno
+}
+
+func (f *pollableFsFile) Poll(flag experimentalsys.Pflag, timeoutMillis int32) (bool, experimentalsys.Errno) {
+	return f.pollReady, f.pollErrno
+}
+
+func TestFsFilePoll_Pollable(t *testing.T) {
+	timeout := int32(0) // return immediately
+
+	memFS := gofstest.MapFS{"test.txt": {Data: []byte("wazero")}}
+	memFile, err := memFS.Open("test.txt")
+	require.NoError(t, err)
+	defer memFile.Close()
+
+	pf := &pollableFsFile{File: memFile, pollReady: true}
+	f := &fsFile{file: pf}
+
+	// When the file implements Pollable, Poll delegates to it.
+	ready, errno := f.Poll(fsapi.POLLIN, timeout)
+	require.EqualErrno(t, 0, errno)
+	require.True(t, ready)
+
+	// A Pollable file can also handle POLLOUT.
+	ready, errno = f.Poll(fsapi.POLLOUT, timeout)
+	require.EqualErrno(t, 0, errno)
+	require.True(t, ready)
+
+	// When the Pollable returns an error, it propagates.
+	pf.pollReady = false
+	pf.pollErrno = experimentalsys.ENOTSUP
+	ready, errno = f.Poll(fsapi.POLLIN, timeout)
+	require.EqualErrno(t, experimentalsys.ENOTSUP, errno)
+	require.False(t, ready)
+}
+
+func TestFsFilePoll_NonPollable(t *testing.T) {
+	timeout := int32(0) // return immediately
+
+	memFS := gofstest.MapFS{"test.txt": {Data: []byte("wazero")}}
+	memFile, err := memFS.Open("test.txt")
+	require.NoError(t, err)
+	defer memFile.Close()
+
+	// A plain fs.File without Pollable returns ENOSYS.
+	f := &fsFile{file: memFile}
+
+	ready, errno := f.Poll(fsapi.POLLIN, timeout)
+	require.EqualErrno(t, experimentalsys.ENOSYS, errno)
+	require.False(t, ready)
+}
+
 func requireRead(t *testing.T, f experimentalsys.File, buf []byte) {
 	n, errno := f.Read(buf)
 	require.EqualErrno(t, 0, errno)
