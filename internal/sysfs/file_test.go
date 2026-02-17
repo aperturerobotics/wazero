@@ -11,7 +11,6 @@ import (
 	gofstest "testing/fstest"
 
 	experimentalsys "github.com/tetratelabs/wazero/experimental/sys"
-	"github.com/tetratelabs/wazero/internal/fsapi"
 	"github.com/tetratelabs/wazero/internal/testing/require"
 	"github.com/tetratelabs/wazero/sys"
 )
@@ -36,13 +35,14 @@ func TestStdioFileSetNonblock(t *testing.T) {
 	rF, err := NewStdioFile(true, r)
 	require.NoError(t, err)
 
-	errno := rF.SetNonblock(true)
+	pf := rF.(experimentalsys.PollableFile)
+	errno := pf.SetNonblock(true)
 	require.EqualErrno(t, 0, errno)
-	require.True(t, rF.IsNonblock())
+	require.True(t, pf.IsNonblock())
 
-	errno = rF.SetNonblock(false)
+	errno = pf.SetNonblock(false)
 	require.EqualErrno(t, 0, errno)
-	require.False(t, rF.IsNonblock())
+	require.False(t, pf.IsNonblock())
 }
 
 func TestRegularFileSetNonblock(t *testing.T) {
@@ -54,18 +54,19 @@ func TestRegularFileSetNonblock(t *testing.T) {
 
 	rF := newOsFile("", experimentalsys.O_RDONLY, 0, r)
 
-	errno := rF.SetNonblock(true)
+	pf := rF.(experimentalsys.PollableFile)
+	errno := pf.SetNonblock(true)
 	require.EqualErrno(t, 0, errno)
-	require.True(t, rF.IsNonblock())
+	require.True(t, pf.IsNonblock())
 
 	// Read from the file without ever writing to it should not block.
 	buf := make([]byte, 8)
 	_, e := rF.Read(buf)
 	require.EqualErrno(t, experimentalsys.EAGAIN, e)
 
-	errno = rF.SetNonblock(false)
+	errno = pf.SetNonblock(false)
 	require.EqualErrno(t, 0, errno)
-	require.False(t, rF.IsNonblock())
+	require.False(t, pf.IsNonblock())
 }
 
 func TestReadFdNonblock(t *testing.T) {
@@ -350,7 +351,7 @@ func TestFileReadAndPread(t *testing.T) {
 }
 
 func TestFilePoll_POLLIN(t *testing.T) {
-	pflag := fsapi.POLLIN
+	pflag := experimentalsys.POLLIN
 
 	// Test using os.Pipe as it is known to support poll.
 	r, w, err := os.Pipe()
@@ -363,8 +364,10 @@ func TestFilePoll_POLLIN(t *testing.T) {
 	buf := make([]byte, 10)
 	timeout := int32(0) // return immediately
 
+	poller := rF.(experimentalsys.Pollable)
+
 	// When there's nothing in the pipe, it isn't ready.
-	ready, errno := rF.Poll(pflag, timeout)
+	ready, errno := poller.Poll(pflag, timeout)
 	require.EqualErrno(t, 0, errno)
 	require.False(t, ready)
 
@@ -374,7 +377,7 @@ func TestFilePoll_POLLIN(t *testing.T) {
 	require.NoError(t, err)
 
 	// We should now be able to poll ready
-	ready, errno = rF.Poll(pflag, timeout)
+	ready, errno = poller.Poll(pflag, timeout)
 	require.EqualErrno(t, 0, errno)
 	require.True(t, ready)
 
@@ -386,7 +389,7 @@ func TestFilePoll_POLLIN(t *testing.T) {
 }
 
 func TestFilePoll_POLLOUT(t *testing.T) {
-	pflag := fsapi.POLLOUT
+	pflag := experimentalsys.POLLOUT
 
 	// Test using os.Pipe as it is known to support poll.
 	r, w, err := os.Pipe()
@@ -399,7 +402,7 @@ func TestFilePoll_POLLOUT(t *testing.T) {
 	timeout := int32(0) // return immediately
 
 	// We don't yet implement write blocking.
-	ready, errno := wF.Poll(pflag, timeout)
+	ready, errno := wF.(experimentalsys.Pollable).Poll(pflag, timeout)
 	require.EqualErrno(t, experimentalsys.ENOTSUP, errno)
 	require.False(t, ready)
 }
@@ -427,19 +430,19 @@ func TestFsFilePoll_Pollable(t *testing.T) {
 	f := &fsFile{file: pf}
 
 	// When the file implements Pollable, Poll delegates to it.
-	ready, errno := f.Poll(fsapi.POLLIN, timeout)
+	ready, errno := f.Poll(experimentalsys.POLLIN, timeout)
 	require.EqualErrno(t, 0, errno)
 	require.True(t, ready)
 
 	// A Pollable file can also handle POLLOUT.
-	ready, errno = f.Poll(fsapi.POLLOUT, timeout)
+	ready, errno = f.Poll(experimentalsys.POLLOUT, timeout)
 	require.EqualErrno(t, 0, errno)
 	require.True(t, ready)
 
 	// When the Pollable returns an error, it propagates.
 	pf.pollReady = false
 	pf.pollErrno = experimentalsys.ENOTSUP
-	ready, errno = f.Poll(fsapi.POLLIN, timeout)
+	ready, errno = f.Poll(experimentalsys.POLLIN, timeout)
 	require.EqualErrno(t, experimentalsys.ENOTSUP, errno)
 	require.False(t, ready)
 }
@@ -455,7 +458,7 @@ func TestFsFilePoll_NonPollable(t *testing.T) {
 	// A plain fs.File without Pollable returns ENOSYS.
 	f := &fsFile{file: memFile}
 
-	ready, errno := f.Poll(fsapi.POLLIN, timeout)
+	ready, errno := f.Poll(experimentalsys.POLLIN, timeout)
 	require.EqualErrno(t, experimentalsys.ENOSYS, errno)
 	require.False(t, ready)
 }

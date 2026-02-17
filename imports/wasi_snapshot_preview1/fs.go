@@ -206,7 +206,7 @@ func fdFdstatGetFn(_ context.Context, mod api.Module, params []uint64) experimen
 		fdflags |= wasip1.FD_APPEND
 	}
 
-	if f.File.IsNonblock() {
+	if isNonblock(f.File) {
 		fdflags |= wasip1.FD_NONBLOCK
 	}
 
@@ -311,9 +311,14 @@ func fdFdstatSetFlagsFn(_ context.Context, mod api.Module, params []uint64) expe
 		return experimentalsys.EBADF
 	} else {
 		nonblock := wasip1.FD_NONBLOCK&wasiFlag != 0
-		errno := f.File.SetNonblock(nonblock)
-		if errno != 0 {
-			return errno
+		if pf, ok := f.File.(experimentalsys.PollableFile); ok {
+			if errno := pf.SetNonblock(nonblock); errno != 0 {
+				return errno
+			}
+		} else if isDir, errno := f.File.IsDir(); errno == 0 && isDir {
+			return experimentalsys.EISDIR
+		} else if nonblock {
+			return experimentalsys.ENOSYS
 		}
 		if stat, err := f.File.Stat(); err == 0 && stat.Mode.IsRegular() {
 			// For normal files, proceed to apply an append flag.

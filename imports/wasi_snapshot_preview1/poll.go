@@ -6,7 +6,6 @@ import (
 
 	"github.com/tetratelabs/wazero/api"
 	"github.com/tetratelabs/wazero/experimental/sys"
-	"github.com/tetratelabs/wazero/internal/fsapi"
 	internalsys "github.com/tetratelabs/wazero/internal/sys"
 	"github.com/tetratelabs/wazero/internal/wasip1"
 	"github.com/tetratelabs/wazero/internal/wasm"
@@ -132,7 +131,7 @@ func pollOneoffFn(_ context.Context, mod api.Module, params []uint64) sys.Errno 
 				evt.errno = wasip1.ErrnoBadf
 				writeEvent(outBuf[outOffset:], evt)
 				nevents++
-			} else if fd != internalsys.FdStdin && file.File.IsNonblock() {
+			} else if fd != internalsys.FdStdin && isNonblock(file.File) {
 				writeEvent(outBuf[outOffset:], evt)
 				nevents++
 			} else {
@@ -176,15 +175,17 @@ func pollOneoffFn(_ context.Context, mod api.Module, params []uint64) sys.Errno 
 	}
 
 	// Wait for the timeout to expire, or for some data to become available on Stdin.
-	if stdinReady, errno := stdin.File.Poll(fsapi.POLLIN, int32(timeout.Milliseconds())); errno != 0 {
-		return errno
-	} else if stdinReady {
-		// stdin has data ready to for reading, write back all the events
-		for i := range blockingStdinSubs {
-			evt := blockingStdinSubs[i]
-			evt.errno = 0
-			writeEvent(outBuf[nevents*32:], evt)
-			nevents++
+	if p, ok := stdin.File.(sys.Pollable); ok {
+		if stdinReady, errno := p.Poll(sys.POLLIN, int32(timeout.Milliseconds())); errno != 0 {
+			return errno
+		} else if stdinReady {
+			// stdin has data ready to for reading, write back all the events
+			for i := range blockingStdinSubs {
+				evt := blockingStdinSubs[i]
+				evt.errno = 0
+				writeEvent(outBuf[nevents*32:], evt)
+				nevents++
+			}
 		}
 	}
 
@@ -224,6 +225,15 @@ func processClockEvent(inBuf []byte) (time.Duration, sys.Errno) {
 
 		return time.Duration(timeout), 0
 	}
+}
+
+// isNonblock returns true if the file implements PollableFile and is in
+// non-blocking mode.
+func isNonblock(f sys.File) bool {
+	if pf, ok := f.(sys.PollableFile); ok {
+		return pf.IsNonblock()
+	}
+	return false
 }
 
 // writeEvent writes the event corresponding to the processed subscription.
