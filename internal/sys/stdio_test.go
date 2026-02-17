@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	experimentalsys "github.com/tetratelabs/wazero/experimental/sys"
-	"github.com/tetratelabs/wazero/internal/fsapi"
 	"github.com/tetratelabs/wazero/internal/testing/require"
 )
 
@@ -32,19 +31,19 @@ func TestStdinFilePoll_Pollable(t *testing.T) {
 	f := &StdinFile{Reader: pr}
 
 	// When the reader implements Pollable, Poll delegates to it.
-	ready, errno := f.Poll(fsapi.POLLIN, timeout)
+	ready, errno := f.Poll(experimentalsys.POLLIN, timeout)
 	require.EqualErrno(t, 0, errno)
 	require.True(t, ready)
 
 	// A Pollable reader can also handle POLLOUT.
-	ready, errno = f.Poll(fsapi.POLLOUT, timeout)
+	ready, errno = f.Poll(experimentalsys.POLLOUT, timeout)
 	require.EqualErrno(t, 0, errno)
 	require.True(t, ready)
 
 	// When the Pollable returns an error, it propagates.
 	pr.pollReady = false
 	pr.pollErrno = experimentalsys.ENOTSUP
-	ready, errno = f.Poll(fsapi.POLLIN, timeout)
+	ready, errno = f.Poll(experimentalsys.POLLIN, timeout)
 	require.EqualErrno(t, experimentalsys.ENOTSUP, errno)
 	require.False(t, ready)
 }
@@ -56,12 +55,12 @@ func TestStdinFilePoll_NonPollable(t *testing.T) {
 	f := &StdinFile{Reader: strings.NewReader("data")}
 
 	// POLLIN returns ready because we assume the reader has data.
-	ready, errno := f.Poll(fsapi.POLLIN, timeout)
+	ready, errno := f.Poll(experimentalsys.POLLIN, timeout)
 	require.EqualErrno(t, 0, errno)
 	require.True(t, ready)
 
 	// POLLOUT is not supported without a Pollable implementation.
-	ready, errno = f.Poll(fsapi.POLLOUT, timeout)
+	ready, errno = f.Poll(experimentalsys.POLLOUT, timeout)
 	require.EqualErrno(t, experimentalsys.ENOTSUP, errno)
 	require.False(t, ready)
 }
