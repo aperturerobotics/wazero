@@ -2,6 +2,7 @@ package sys
 
 import (
 	"io"
+	"io/fs"
 	"os"
 
 	experimentalsys "github.com/tetratelabs/wazero/experimental/sys"
@@ -22,6 +23,18 @@ type StdinFile struct {
 func (f *StdinFile) Read(buf []byte) (int, experimentalsys.Errno) {
 	n, err := f.Reader.Read(buf)
 	return n, experimentalsys.UnwrapOSError(err)
+}
+
+// Stat implements the same method as documented on sys.File.
+// If the underlying Reader implements IsCharDevice() bool and returns
+// true, the mode includes fs.ModeCharDevice so that WASI isatty
+// detection works correctly.
+func (f *StdinFile) Stat() (sys.Stat_t, experimentalsys.Errno) {
+	mode := modeDevice
+	if cd, ok := f.Reader.(interface{ IsCharDevice() bool }); ok && cd.IsCharDevice() {
+		mode |= fs.ModeCharDevice
+	}
+	return sys.Stat_t{Mode: mode, Nlink: 1}, 0
 }
 
 // pollable has just the Poll function.
