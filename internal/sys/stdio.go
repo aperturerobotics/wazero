@@ -61,6 +61,18 @@ type writerFile struct {
 	w io.Writer
 }
 
+// Stat implements the same method as documented on sys.File.
+// If the underlying Writer implements IsCharDevice() bool and returns
+// true, the mode includes fs.ModeCharDevice so that WASI isatty
+// detection works correctly for custom stdout/stderr writers.
+func (f *writerFile) Stat() (sys.Stat_t, experimentalsys.Errno) {
+	mode := modeDevice
+	if cd, ok := f.w.(interface{ IsCharDevice() bool }); ok && cd.IsCharDevice() {
+		mode |= fs.ModeCharDevice
+	}
+	return sys.Stat_t{Mode: mode, Nlink: 1}, 0
+}
+
 // Write implements the same method as documented on sys.File
 func (f *writerFile) Write(buf []byte) (int, experimentalsys.Errno) {
 	n, err := f.w.Write(buf)
