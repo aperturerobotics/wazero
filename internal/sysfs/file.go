@@ -367,6 +367,35 @@ func (f *fsFile) close() experimentalsys.Errno {
 	return experimentalsys.UnwrapOSError(f.file.Close())
 }
 
+// nonblocker is a subset of PollableFile for checking non-blocking mode on
+// an fs.File. fs.File cannot implement PollableFile due to conflicting Close
+// signatures (error vs Errno), so we use this narrower interface.
+type nonblocker interface {
+	IsNonblock() bool
+	SetNonblock(enable bool) experimentalsys.Errno
+}
+
+// IsNonblock implements experimentalsys.PollableFile by forwarding to the
+// underlying fs.File if it supports it.
+func (f *fsFile) IsNonblock() bool {
+	if nb, ok := f.file.(nonblocker); ok {
+		return nb.IsNonblock()
+	}
+	return false
+}
+
+// SetNonblock implements experimentalsys.PollableFile by forwarding to the
+// underlying fs.File if it supports it.
+func (f *fsFile) SetNonblock(enable bool) experimentalsys.Errno {
+	if nb, ok := f.file.(nonblocker); ok {
+		return nb.SetNonblock(enable)
+	}
+	if !enable {
+		return 0 // disabling nonblock on a file that doesn't support it is a no-op
+	}
+	return experimentalsys.ENOSYS
+}
+
 // Poll implements experimentalsys.Pollable by forwarding to the underlying
 // fs.File if it supports polling.
 //

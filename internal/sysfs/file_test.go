@@ -418,6 +418,21 @@ func (f *pollableFsFile) Poll(flag experimentalsys.Pflag, timeoutMillis int32) (
 	return f.pollReady, f.pollErrno
 }
 
+// nonblockFsFile extends pollableFsFile with IsNonblock/SetNonblock support.
+type nonblockFsFile struct {
+	pollableFsFile
+	nonblock bool
+}
+
+func (f *nonblockFsFile) IsNonblock() bool {
+	return f.nonblock
+}
+
+func (f *nonblockFsFile) SetNonblock(enable bool) experimentalsys.Errno {
+	f.nonblock = enable
+	return 0
+}
+
 func TestFsFilePoll_Pollable(t *testing.T) {
 	timeout := int32(0) // return immediately
 
@@ -445,6 +460,38 @@ func TestFsFilePoll_Pollable(t *testing.T) {
 	ready, errno = f.Poll(experimentalsys.POLLIN, timeout)
 	require.EqualErrno(t, experimentalsys.ENOTSUP, errno)
 	require.False(t, ready)
+}
+
+func TestFsFileNonblock(t *testing.T) {
+	memFS := gofstest.MapFS{"test.txt": {Data: []byte("wazero")}}
+	memFile, err := memFS.Open("test.txt")
+	require.NoError(t, err)
+	defer memFile.Close()
+
+	// An fs.File implementing IsNonblock/SetNonblock gets forwarded.
+	nbf := &nonblockFsFile{pollableFsFile: pollableFsFile{File: memFile}}
+	f := &fsFile{file: nbf}
+
+	require.False(t, f.IsNonblock())
+	require.EqualErrno(t, 0, f.SetNonblock(true))
+	require.True(t, f.IsNonblock())
+	require.EqualErrno(t, 0, f.SetNonblock(false))
+	require.False(t, f.IsNonblock())
+}
+
+func TestFsFileNonblock_NotSupported(t *testing.T) {
+	memFS := gofstest.MapFS{"test.txt": {Data: []byte("wazero")}}
+	memFile, err := memFS.Open("test.txt")
+	require.NoError(t, err)
+	defer memFile.Close()
+
+	// A plain fs.File without nonblock support returns defaults.
+	f := &fsFile{file: memFile}
+	require.False(t, f.IsNonblock())
+	require.EqualErrno(t, experimentalsys.ENOSYS, f.SetNonblock(true))
+
+	// Disabling nonblock on a file that doesn't support it is a no-op.
+	require.EqualErrno(t, 0, f.SetNonblock(false))
 }
 
 func TestFsFilePoll_NonPollable(t *testing.T) {
