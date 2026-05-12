@@ -42,7 +42,7 @@ jobs:
           path: |
             ~/go/pkg/mod
             ~/go/bin
-          key: pre-release-check-${{ runner.os }}-go-${{ matrix.go-version }}-${{ hashFiles('**/go.sum', 'Makefile') }}
+          key: pre-release-check-${{ github.event_name }}-${{ runner.os }}-go-${{ matrix.go-version }}-${{ hashFiles('**/go.sum', 'Makefile') }}
 
       - name: Make artifacts (test)
         if: github.event_name != 'push' || !contains(github.ref, 'refs/tags/')
