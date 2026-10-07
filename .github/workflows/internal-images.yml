@@ -6,18 +6,18 @@ name: internal-images
 on:
   schedule:
     - cron: "23 3 * * *"
-  workflow_dispatch:  # Allows manual refresh
+  workflow_dispatch: # Allows manual refresh
 
 # This builds images and pushes them to ghcr.io/tetratelabs/wazero/internal-$tag
 # Using these avoid docker.io rate-limits particularly on pull requests.
 jobs:
   copy-images:
-    runs-on: ubuntu-24.04  # Hard-coding an LTS means maintenance, but only once each 2 years!
+    runs-on: ubuntu-24.04 # Hard-coding an LTS means maintenance, but only once each 2 years!
     strategy:
       matrix:
         # Be precise in tag versions to improve reproducibility
         include:
-          - source: tonistiigi/binfmt:qemu-v6.2.0  # for docker/setup-qemu-action
+          - source: tonistiigi/binfmt:qemu-v6.2.0 # for docker/setup-qemu-action
             target_tag: binfmt
 
     steps:
@@ -34,7 +34,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Pull and push
-        run: |  # This will only push a single architecture, which is fine as we currently only support amd64
+        run: | # This will only push a single architecture, which is fine as we currently only support amd64
           docker pull ${{ matrix.source }}
           docker tag ${{ matrix.source }} ghcr.io/${{ github.repository }}/internal-${{ matrix.target_tag }}
           docker push ghcr.io/${{ github.repository }}/internal-${{ matrix.target_tag }}

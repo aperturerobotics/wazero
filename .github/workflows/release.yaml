@@ -2,19 +2,19 @@ name: Release CLI
 on:
   pull_request:
     branches: [main]
-    paths-ignore:  # ignore docs as they are built with Netlify.
-      - '**/*.md'
-      - 'site/**'
-      - 'netlify.toml'
+    paths-ignore: # ignore docs as they are built with Netlify.
+      - "**/*.md"
+      - "site/**"
+      - "netlify.toml"
   push:
     branches: [main]
-    tags: 'v[0-9]+.[0-9]+.[0-9]+**'  # Ex. v0.2.0 v0.2.1-rc2
+    tags: "v[0-9]+.[0-9]+.[0-9]+**" # Ex. v0.2.0 v0.2.1-rc2
 
 env: # Update this prior to requiring a higher minor version in go.mod
   GO_VERSION: "1.25"
 
 defaults:
-  run:  # use bash for all operating systems unless overridden
+  run: # use bash for all operating systems unless overridden
     shell: bash
 
 concurrency:
@@ -79,8 +79,7 @@ jobs:
           enableCrossOsArchive: true
           # Note: this creates a cache per run.
           key: release-artifacts-${{ github.run_id }}
-          path:
-            dist/
+          path: dist/
 
   # pre_release_test tests the artifacts built by pre_release in the OS dependent way.
   pre_release_test:
@@ -102,11 +101,10 @@ jobs:
           fail-on-cache-miss: true
           enableCrossOsArchive: true
           key: release-artifacts-${{ github.run_id }}
-          path:
-            dist/
+          path: dist/
 
       - name: Test (linux)
-         # Check if the version was correctly inserted with VERSION variable
+          # Check if the version was correctly inserted with VERSION variable
         if: runner.os == 'Linux'
         run: |
           tar xf dist/wazero_${{ needs.pre_release.outputs.VERSION }}_linux_amd64.tar.gz
@@ -136,7 +134,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-        with:  # Ensure release_notes.sh can see prior commits
+        with: # Ensure release_notes.sh can see prior commits
           fetch-depth: 0
 
       - uses: actions/cache@v4
@@ -145,8 +143,7 @@ jobs:
           fail-on-cache-miss: true
           enableCrossOsArchive: true
           key: release-artifacts-${{ github.run_id }}
-          path:
-            dist/
+          path: dist/
 
       - name: Create draft release
         run: |

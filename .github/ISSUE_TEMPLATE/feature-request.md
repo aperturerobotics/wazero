@@ -1,10 +1,9 @@
 ---
 name: Feature Request
 about: Suggest an idea for wazero to support.
-title: ''
+title: ""
 labels: enhancement
-assignees: ''
-
+assignees: ""
 ---
 
 **Is your feature request related to a problem? Please describe.**

@@ -1,10 +1,9 @@
 ---
 name: Bug Report
 about: Create a report to help us improve wazero.
-title: ''
+title: ""
 labels: bug
-assignees: ''
-
+assignees: ""
 ---
 
 **Describe the bug**
@@ -22,6 +21,7 @@ A clear and concise description of what you expected to happen.
 If applicable, add screenshots to help explain your problem.
 
 **Environment (please complete the relevant information):**
+
 - Go version: [e.g. 1.19.1]
 - wazero Version: [e.g. c815060196bbfaa2d0f66a6ddbe64ba026523944]
 - Host architecture: [e.g. amd64]

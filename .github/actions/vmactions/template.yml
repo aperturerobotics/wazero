@@ -3,13 +3,13 @@ description: VM Actions matrix template
 
 inputs:
   run:
-    description: 'The CI command to run'
+    description: "The CI command to run"
     required: true
   release:
-    description: 'The OS release version'
+    description: "The OS release version"
     required: false
   envs:
-    description: 'The envs to pass into vm'
+    description: "The envs to pass into vm"
     required: false
 
 runs:

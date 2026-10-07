@@ -2,22 +2,22 @@ name: Test
 on:
   pull_request:
     branches: [main]
-    paths-ignore:  # ignore docs as they are built with Netlify.
-      - '**/*.md'
-      - 'site/**'
-      - 'netlify.toml'
+    paths-ignore: # ignore docs as they are built with Netlify.
+      - "**/*.md"
+      - "site/**"
+      - "netlify.toml"
   push:
     branches: [main]
-    paths-ignore:  # ignore docs as they are built with Netlify.
-      - '**/*.md'
-      - 'site/**'
-      - 'netlify.toml'
+    paths-ignore: # ignore docs as they are built with Netlify.
+      - "**/*.md"
+      - "site/**"
+      - "netlify.toml"
 
-env:  # Update this prior to requiring a higher minor version in go.mod
+env: # Update this prior to requiring a higher minor version in go.mod
   GO_VERSION: "1.25"
 
 defaults:
-  run:  # use bash for all operating systems unless overridden
+  run: # use bash for all operating systems unless overridden
     shell: bash
 
 concurrency:
@@ -31,7 +31,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Install latest wast2json
-        run: |  # Needed for build.spectest. wabt includes wast2json.
+        run: | # Needed for build.spectest. wabt includes wast2json.
           wabt_version=1.0.39
           wabt_url=https://github.com/WebAssembly/wabt/releases/download/${wabt_version}/wabt-${wabt_version}-linux-x64.tar.gz
           curl -sSL ${wabt_url} | tar --strip-components 2 -C /usr/local/bin -xzf - wabt-${wabt_version}/bin/wast2json
@@ -39,7 +39,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-go@v5
-        with:  # not cache: true as we also need to cache golint
+        with: # not cache: true as we also need to cache golint
           cache: false
           go-version: ${{ env.GO_VERSION }}
 
@@ -60,21 +60,20 @@ jobs:
     name: ${{ matrix.platform.arch }}, ${{ matrix.platform.os }}, Go-${{ matrix.go-version }}
     runs-on: ${{ matrix.platform.os }}
     strategy:
-      fail-fast: false  # don't fail fast as sometimes failures are arch/OS specific
-      matrix:  # Use versions consistent with wazero's Go support policy.
+      fail-fast: false # don't fail fast as sometimes failures are arch/OS specific
+      matrix: # Use versions consistent with wazero's Go support policy.
         platform:
-        - os: ubuntu-24.04
-          arch: amd64
-        - os: windows-2025
-          arch: amd64
-        - os: macos-14
-          arch: arm64
+          - os: ubuntu-24.04
+            arch: amd64
+          - os: windows-2025
+            arch: amd64
+          - os: macos-14
+            arch: arm64
         go-version:
-          - "1.25"  # Current Go version
-          - "1.24"  # Floor Go version of wazero (current - 1)
+          - "1.25" # Current Go version
+          - "1.24" # Floor Go version of wazero (current - 1)
 
     steps:
-
       - uses: actions/checkout@v4
 
       - uses: actions/setup-go@v5
@@ -94,11 +93,11 @@ jobs:
       # Since -short is not added in the scratch tests, all the tests are run in CI in practice.
       - run: make test go_test_options='-timeout 20m -race -short'
 
-      - name: "Generate coverage report"  # only once (not per OS)
+      - name: "Generate coverage report" # only once (not per OS)
         if: runner.os == 'Linux'
         run: make coverage
 
-      - name: "Upload coverage report"  # only on main push and only once (not per OS)
+      - name: "Upload coverage report" # only on main push and only once (not per OS)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main' && runner.os == 'Linux'
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
@@ -108,11 +107,11 @@ jobs:
     name: ${{ matrix.platform.arch }}, Linux (scratch), Go-${{ matrix.go-version }}${{ matrix.platform.no_prot_exec && ', no-prot-exec' }}
     runs-on: ${{ matrix.platform.os }}
     strategy:
-      fail-fast: false  # don't fail fast as sometimes failures are arch/OS specific
-      matrix:  # Use versions consistent with wazero's Go support policy.
+      fail-fast: false # don't fail fast as sometimes failures are arch/OS specific
+      matrix: # Use versions consistent with wazero's Go support policy.
         go-version:
-          - "1.25"  # Current Go version
-          - "1.24"  # Floor Go version of wazero (current - 1)
+          - "1.25" # Current Go version
+          - "1.24" # Floor Go version of wazero (current - 1)
         platform:
           - os: ubuntu-24.04
             arch: amd64
@@ -126,7 +125,6 @@ jobs:
             qemu: true
 
     steps:
-
       - uses: actions/checkout@v4
 
       - uses: actions/setup-go@v5
@@ -149,7 +147,7 @@ jobs:
       - name: Set up QEMU
         if: ${{ matrix.platform.qemu }}
         uses: docker/setup-qemu-action@v3
-        with:  # Avoid docker.io rate-limits; built with internal-images.yml
+        with: # Avoid docker.io rate-limits; built with internal-images.yml
           image: ghcr.io/tetratelabs/wazero/internal-binfmt
           platforms: ${{ matrix.arch }}
 
@@ -184,7 +182,7 @@ jobs:
     name: amd64, ${{ matrix.os.name }}
     runs-on: ubuntu-24.04
     strategy:
-      fail-fast: false  # don't fail fast as sometimes failures are OS specific
+      fail-fast: false # don't fail fast as sometimes failures are OS specific
       matrix:
         os:
           - name: freebsd
@@ -226,18 +224,18 @@ jobs:
     name: amd64, ${{ matrix.os.name }}
     runs-on: ubuntu-24.04
     strategy:
-      fail-fast: false  # don't fail fast as sometimes failures are OS specific
+      fail-fast: false # don't fail fast as sometimes failures are OS specific
       matrix:
         os:
           - name: dragonfly
             version: "6.4.2"
-            action: 'vmactions/dragonflybsd-vm@v1'
+            action: "vmactions/dragonflybsd-vm@v1"
           - name: illumos
             version: "r151054"
-            action: 'vmactions/omnios-vm@v1'
+            action: "vmactions/omnios-vm@v1"
           - name: solaris
             version: "11.4"
-            action: 'vmactions/solaris-vm@v1'
+            action: "vmactions/solaris-vm@v1"
 
     steps:
       - uses: actions/checkout@v4
@@ -271,8 +269,8 @@ jobs:
     name: Minimal Fuzzing (${{ matrix.platform.os }}, ${{ matrix.platform.arch }})
     runs-on: ${{ matrix.platform.os }}
     strategy:
-      fail-fast: false  # don't fail fast as sometimes failures are arch/OS specific
-      matrix:  # Use versions consistent with wazero's Go support policy.
+      fail-fast: false # don't fail fast as sometimes failures are arch/OS specific
+      matrix: # Use versions consistent with wazero's Go support policy.
         platform:
           - os: ubuntu-24.04
             arch: amd64

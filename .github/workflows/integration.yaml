@@ -2,22 +2,22 @@ name: Standard Library Integration Tests
 on:
   pull_request:
     branches: [main]
-    paths-ignore:  # ignore docs as they are built with Netlify.
-      - '**/*.md'
-      - 'site/**'
-      - 'netlify.toml'
+    paths-ignore: # ignore docs as they are built with Netlify.
+      - "**/*.md"
+      - "site/**"
+      - "netlify.toml"
   push:
     branches: [main]
-    paths-ignore:  # ignore docs as they are built with Netlify.
-      - '**/*.md'
-      - 'site/**'
-      - 'netlify.toml'
+    paths-ignore: # ignore docs as they are built with Netlify.
+      - "**/*.md"
+      - "site/**"
+      - "netlify.toml"
 
 defaults:
-  run:  # use bash for all operating systems unless overridden
+  run: # use bash for all operating systems unless overridden
     shell: bash
 
-env:  # Update this prior to requiring a higher minor version in go.mod
+env: # Update this prior to requiring a higher minor version in go.mod
   GO_VERSION: "1.25"
   ZIG_VERSION: "0.11.0"
   BINARYEN_VERSION: "116"
@@ -47,8 +47,7 @@ jobs:
           # Use share the cache containing archives across OSes.
           enableCrossOsArchive: true
           key: zig-stdlib-test-binary-${{ env.ZIG_VERSION }}-${{ hashFiles(format('{0}/Makefile', env.STDLIB_TESTS)) }}
-          path:
-            ${{ env.STDLIB_TESTS }}/testdata/zig
+          path: ${{ env.STDLIB_TESTS }}/testdata/zig
 
       - name: Install Zig build
         if: steps.binary-cache.outputs.cache-hit != 'true'
@@ -107,8 +106,7 @@ jobs:
           # We need this cache to run tests.
           fail-on-cache-miss: true
           key: zig-stdlib-test-binary-${{ env.ZIG_VERSION }}
-          path:
-            ${{ env.STDLIB_TESTS }}/testdata/zig
+          path: ${{ env.STDLIB_TESTS }}/testdata/zig
 
       - uses: actions/setup-go@v5
         with:
@@ -131,8 +129,7 @@ jobs:
       - uses: actions/cache@v4
         id: cache
         with:
-          path:
-            ~/go/pkg/mod
+          path: ~/go/pkg/mod
           key: integration-test-wasi-testsuite-${{ runner.os }}-go-${{ env.GO_VERSION }}-${{ hashFiles('**/go.sum') }}
 
       - uses: actions/setup-go@v5
@@ -157,7 +154,7 @@ jobs:
       - name: Initialize Python environment
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11' # latest version of python 3
+          python-version: "3.11" # latest version of python 3
           cache: pip
 
       - name: Install dependencies
@@ -186,15 +183,15 @@ jobs:
         # version is too verbose to be present in the name, so we use the name instead.
         # Note that it'd be better to use runner.os in the name, but the runner context is not available in the name field.
         os:
-        - version: ubuntu-24.04
-          name: Ubuntu
-          arch: amd64
-        - version: macos-14
-          name: macOS
-          arch: arm64
-        - version: windows-2025
-          name: Windows
-          arch: amd64
+          - version: ubuntu-24.04
+            name: Ubuntu
+            arch: amd64
+          - version: macos-14
+            name: macOS
+            arch: arm64
+          - version: windows-2025
+            name: Windows
+            arch: amd64
         go-version:
           - "1.25"
           - "1.24"
@@ -212,8 +209,7 @@ jobs:
         id: cache-go-test-binaries
         uses: actions/cache@v4
         with:
-          path:
-            ${{ env.STDLIB_TESTS }}/testdata/go
+          path: ${{ env.STDLIB_TESTS }}/testdata/go
           # Use precise Go version from setup-go as patch version differences can effect tests.
           key: go-wasip1-binaries-${{ matrix.os.version }}-${{ steps.setup-go.outputs.go-version }}-${{ matrix.os.arch }}-${{ hashFiles(format('{0}/Makefile', env.STDLIB_TESTS)) }}
 
