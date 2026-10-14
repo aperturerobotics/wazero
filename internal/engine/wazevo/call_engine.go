@@ -90,6 +90,8 @@ type (
 		memoryWait64TrampolineAddress *byte
 		// memoryNotifyTrampolineAddress holds the address of the memory_notify trampoline function.
 		memoryNotifyTrampolineAddress *byte
+		// checkModuleExitCodeCountdown holds the loop iterations left before the next module exit code check.
+		checkModuleExitCodeCountdown int64
 	}
 )
 
@@ -423,6 +425,7 @@ func (c *callEngine) callWithStack(ctx context.Context, paramResultStack []uint6
 			if err := m.FailIfClosed(); err != nil {
 				panic(err)
 			}
+			c.execCtx.checkModuleExitCodeCountdown = wazevoapi.CheckModuleExitCodeInterval
 			c.execCtx.exitCode = wazevoapi.ExitCodeOK
 			afterGoFunctionCallEntrypoint(c.execCtx.goCallReturnAddress, c.execCtxPtr,
 				uintptr(unsafe.Pointer(c.execCtx.stackPointerBeforeGoCall)), c.execCtx.framePointerBeforeGoCall)

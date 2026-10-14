@@ -53,6 +53,8 @@ const (
 	ExecutionContextOffsetMemoryWait32TrampolineAddress Offset = 1160
 	ExecutionContextOffsetMemoryWait64TrampolineAddress Offset = 1168
 	ExecutionContextOffsetMemoryNotifyTrampolineAddress Offset = 1176
+	// ExecutionContextOffsetCheckModuleExitCodeCountdown is an offset of `checkModuleExitCodeCountdown` field in wazevo.executionContext
+	ExecutionContextOffsetCheckModuleExitCodeCountdown Offset = 1184
 )
 
 // ModuleContextOffsetData allows the compilers to get the information about offsets to the fields of wazevo.moduleContextOpaque,
